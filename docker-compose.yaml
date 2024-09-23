@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:14
+    container_name: db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: Goods
+    ports:
+      - "5433:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    networks:
+      - app-network
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 10s
+      retries: 5
+      start_period: 10s
+      timeout: 5s
+
+  app:
+    build: .
+    container_name: go-app
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - DATABASE_URL=postgres://postgres:postgres@db:5432/Goods?sslmode=disable
+    ports:
+      - "8000:8000"
+    networks:
+      - app-network
+    restart: always
+    command: ["./goods", "--config=./config/local.yaml"]
+
+  goose:
+    build:
+      context: ./migrations
+      dockerfile: Dockerfile
+    environment:
+      - DATABASE_URL=postgres://postgres:postgres@db:5432/Goods?sslmode=disable
+    networks:
+      - app-network
+    depends_on:
+      db:
+        condition: service_healthy  # Зависимость от готовности базы данных
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  db_data:

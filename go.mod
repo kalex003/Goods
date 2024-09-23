@@ -3,6 +3,7 @@ module Goods
 go 1.22
 
 require (
+	github.com/golang/protobuf v1.5.4
 	github.com/ilyakaznacheev/cleanenv v1.5.0
 	github.com/jmoiron/sqlx v1.4.0
 	github.com/kalex003/Goods_Proto v0.0.0-20240823101137-5787989fd2de
@@ -12,7 +13,6 @@ require (
 
 require (
 	github.com/BurntSushi/toml v1.4.0 // indirect
-	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/joho/godotenv v1.5.1 // indirect
 	golang.org/x/net v0.25.0 // indirect
 	golang.org/x/sys v0.20.0 // indirect

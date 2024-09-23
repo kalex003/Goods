@@ -4,7 +4,6 @@ import (
 	"Goods/internal/app"
 	"Goods/internal/config"
 	"fmt"
-	"log"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -17,7 +16,7 @@ const (
 	envProd  = "prod"
 )
 
-var ConnString = MustGetEnv("DATABASE_URL")
+/*var ConnString = MustGetEnv("DATABASE_URL")
 
 func MustGetEnv(key string) string {
 	value := os.Getenv(key)
@@ -26,7 +25,9 @@ func MustGetEnv(key string) string {
 	}
 
 	return value
-}
+}*/
+
+var ConnString = "postgres://postgres:postgres@db:5432/Goods?sslmode=disable"
 
 func main() {
 	cfg := config.MustLoad()
