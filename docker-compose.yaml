@@ -30,7 +30,7 @@ services:
     environment:
       - DATABASE_URL=postgres://postgres:postgres@db:5432/Goods?sslmode=disable
     ports:
-      - "8000:8000"
+      - "8000:44044"
     networks:
       - app-network
     restart: always

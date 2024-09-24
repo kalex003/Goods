@@ -4,6 +4,7 @@ import (
 	grpcgoods "Goods/internal/grpc/goods"
 	"fmt"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
 	"log/slog"
 	"net"
 )
@@ -16,6 +17,8 @@ type App struct {
 
 func New(log *slog.Logger, goodsService grpcgoods.Goods, port int) *App {
 	grpcServer := grpc.NewServer()
+
+	reflection.Register(grpcServer)
 
 	grpcgoods.Register(grpcServer, goodsService)
 	return &App{

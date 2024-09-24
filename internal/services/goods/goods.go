@@ -3,8 +3,9 @@ package goods
 import (
 	"Goods/internal/domain/models"
 	"context"
-	"github.com/golang/protobuf/ptypes/timestamp"
+	"google.golang.org/protobuf/types/known/timestamppb"
 	"log/slog"
+	"time"
 )
 
 type Goods struct {
@@ -16,7 +17,7 @@ type Goods struct {
 }
 
 type GoodsSaver interface { //для типа сторэдж
-	SaveGood(ctx context.Context, insmodel models.GoodInfo) (int64, timestamp.Timestamp, error)
+	SaveGood(ctx context.Context, insmodel models.GoodInfo) (int64, time.Time, error)
 }
 
 type GoodsUpdater interface { //для типа сторэдж
@@ -41,7 +42,7 @@ func New(log *slog.Logger, goodsSaver GoodsSaver, goodsUpdater GoodsUpdater, goo
 	}
 }
 
-func (g *Goods) InsertNewGood(ctx context.Context, insmodel models.GoodInfo) (int64, timestamp.Timestamp, error) {
+func (g *Goods) InsertNewGood(ctx context.Context, insmodel models.GoodInfo) (int64, *timestamppb.Timestamp, error) {
 	const op = "Good.Save"
 
 	log := g.log.With(
@@ -54,10 +55,10 @@ func (g *Goods) InsertNewGood(ctx context.Context, insmodel models.GoodInfo) (in
 	goodId, chDt, err := g.GoodsSaver.SaveGood(ctx, insmodel) //вызываю пг-шку
 
 	if err != nil {
-		return -1, timestamp.Timestamp{}, err
+		return -1, &timestamppb.Timestamp{}, err
 	}
 
-	return goodId, chDt, err
+	return goodId, timestamppb.New(chDt), err
 
 }
 

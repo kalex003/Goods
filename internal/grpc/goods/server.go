@@ -8,10 +8,11 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type Goods interface { // тут основная логика будет (создали интерфейс, в services.goods.goods.go будет структура Goods, которая будет реализоывать контракт)
-	InsertNewGood(context.Context, models.GoodInfo) (int64, timestamp.Timestamp, error)
+	InsertNewGood(context.Context, models.GoodInfo) (int64, *timestamp.Timestamp, error)
 	GetGoodInfo(context.Context, int64) (models.GoodFullInfo, error)
 	ChangeGood(context.Context, models.GoodFullInfo) error
 	RemoveGood(context.Context, int64) error
@@ -42,22 +43,22 @@ func (s *serverAPI) Insert(ctx context.Context, req *goodsv1.InsertRequest) (*go
 
 	return &goodsv1.InsertResponse{
 		GoodsId: goodID,
-		ChDt:    &chDt, // поч grpc заставляет меня использовать указатель
+		ChDt:    chDt, // поч grpc заставляет меня использовать указатель
 	}, nil
 
 }
 
 func ValidateInsert(req *goodsv1.InsertRequest) error {
 
-	if req.GetPlaceId() >= 0 {
+	if req.GetPlaceId() <= 0 {
 		return status.Error(codes.InvalidArgument, "missing place_id")
 	}
 
-	if req.GetSkuId() >= 0 {
+	if req.GetSkuId() <= 0 {
 		return status.Error(codes.InvalidArgument, "missing sku_id")
 	}
 
-	if req.GetWbstickerId() >= 0 {
+	if req.GetWbstickerId() <= 0 {
 		return status.Error(codes.InvalidArgument, "missing wbsticker_id")
 	}
 
@@ -69,19 +70,19 @@ func ValidateInsert(req *goodsv1.InsertRequest) error {
 		return status.Error(codes.InvalidArgument, "missing state_id")
 	}
 
-	if req.GetChEmployeeId() >= 0 {
+	if req.GetChEmployeeId() <= 0 {
 		return status.Error(codes.InvalidArgument, "missing ch_employee_id")
 	}
 
-	if req.GetOfficeId() >= 0 {
+	if req.GetOfficeId() <= 0 {
 		return status.Error(codes.InvalidArgument, "missing office_id")
 	}
 
-	if req.GetWhId() >= 0 {
+	if req.GetWhId() <= 0 {
 		return status.Error(codes.InvalidArgument, "missing wh_id")
 	}
 
-	if req.GetTareId() >= 0 {
+	if req.GetTareId() <= 0 {
 		return status.Error(codes.InvalidArgument, "missing tare_id")
 	}
 
@@ -115,6 +116,7 @@ func (s *serverAPI) Get(ctx context.Context, req *goodsv1.GetRequest) (*goodsv1.
 		WhId:         resp.WhId,
 		TareId:       resp.TareId,
 		TareType:     resp.TareType,
+		ChDt:         timestamppb.New(resp.ChDt),
 	}, nil
 }
 
