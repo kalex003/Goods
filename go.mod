@@ -6,7 +6,7 @@ require (
 	github.com/golang/protobuf v1.5.4
 	github.com/ilyakaznacheev/cleanenv v1.5.0
 	github.com/jmoiron/sqlx v1.4.0
-	github.com/kalex003/Goods_Proto v0.0.0-20240924110322-b0b3d7bd0758
+	github.com/kalex003/Goods_Proto v0.0.0-20240925185451-863b608522c3
 	github.com/lib/pq v1.10.9
 	google.golang.org/grpc v1.65.0
 	google.golang.org/protobuf v1.34.1
