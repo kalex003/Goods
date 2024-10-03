@@ -4,6 +4,7 @@ import (
 	grpcapp "Goods/internal/app/grpc"
 	"Goods/internal/services/goods"
 	"Goods/internal/storage/postgres"
+	storage "Goods/internal/storage/postgres"
 	"log/slog"
 )
 
@@ -15,7 +16,7 @@ func New(
 	log *slog.Logger,
 	grpcport int,
 	ConnString string, // чет сложно, тут надо разбираться до конца нормально
-) *App {
+) (*App, *storage.GoodsDb) {
 
 	GoodsDb, err := postgres.New(ConnString)
 
@@ -29,5 +30,5 @@ func New(
 
 	return &App{
 		GRPCServer: grpcApp,
-	}
+	}, GoodsDb
 }

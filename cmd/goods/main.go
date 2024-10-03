@@ -3,11 +3,13 @@ package main
 import (
 	"Goods/internal/app"
 	"Goods/internal/config"
+	storage "Goods/internal/storage/postgres"
 	"fmt"
 	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 )
 
 const (
@@ -29,6 +31,31 @@ func MustGetEnv(key string) string {
 
 var ConnString = "postgres://postgres:postgres@db:5432/Goods?sslmode=disable"
 
+const createPartitionSQL = `
+DO
+$$
+BEGIN
+EXECUTE format('CREATE TABLE "goods.goodslog' || '[' || DATE(NOW()::TIMESTAMP)::TEXT || ']"' || ' PARTITION OF goods.goodslog FOR VALUES FROM (''' || DATE_TRUNC('day', NOW()::TIMESTAMP)::TEXT || ''') TO ('''|| (DATE_TRUNC('day', NOW()::TIMESTAMP) + INTERVAL '3 minutes')::TEXT  || ''');');
+END
+$$;
+`
+
+func worker(log *slog.Logger, db *storage.GoodsDb) {
+	for {
+		log.Info("Запуск создания артиции")
+
+		_, err := db.Db.Exec(createPartitionSQL)
+		if err != nil {
+			log.Info("Ошибка при создании партиции: %v\n", err)
+		} else {
+			log.Info("Партиция успешно создана.")
+		}
+
+		// Ожидание 10 минут перед следующим запуском
+		time.Sleep(10 * time.Minute)
+	}
+}
+
 func main() {
 	cfg := config.MustLoad()
 	fmt.Println(cfg)
@@ -41,12 +68,14 @@ func main() {
 		slog.Int("port", cfg.GRPC.Port),
 	)
 
-	application := app.New(log, cfg.GRPC.Port, ConnString)
+	application, db := app.New(log, cfg.GRPC.Port, ConnString) //добавил для крончика
 
 	go application.GRPCServer.MustRun() //в параллельном режиме от остальной программы обрабатываем запросы
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGTERM, syscall.SIGINT) //обработка заверщаюего сигнала (одного из двух сигтерм или сигинт)
+
+	go worker(log, db)
 
 	<-stop //пока в этот канал что-то не придет (сигнал о зщавершении программы), мы тут просто будем висеть и ждать, а сверху будет работать го рутина
 
