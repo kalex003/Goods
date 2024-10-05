@@ -11,7 +11,7 @@ import (
 
 type Goods interface { // тут основная логика будет (создали интерфейс, в services.goods.goods.go будет структура Goods, которая будет реализоывать контракт)
 	InsertNewGoods(context.Context, models.GoodsInfo) (models.GoodsInsertAnswers, error)
-	GetByIdsGoodsInfo(context.Context, []int64) (models.GoodsFullInfo, error)
+	GetByIdsGoodsInfo(context.Context, *[]int64) (models.GoodsFullInfo, error)
 	ChangeGoods(context.Context, models.GoodsUpdateInputs) (models.GoodsUpdateAnswers, error)
 	ChangeIsDelOfGoods(context.Context, models.GoodsUpdateIsDelInputs) (models.GoodsUpdateIsDelAnswers, error)
 	GetByPlaceGoodsInfo(context.Context, int64) (models.GoodsFullInfo, error)
@@ -103,10 +103,10 @@ func (s *serverAPI) GetById(ctx context.Context, req *goodsv1.GetByIdRequest) (*
 
 	// Заполняем массив значениями GoodsId
 	for i, item := range req.GetStructs() {
-		goodsIds[i] = item.GoodsId
+		goodsIds[i] = *item.GoodsId
 	}
 
-	resp, err := s.goods.GetByIdsGoodsInfo(ctx, goodsIds)
+	resp, err := s.goods.GetByIdsGoodsInfo(ctx, &goodsIds)
 
 	if err != nil {
 		return nil, err
@@ -115,8 +115,8 @@ func (s *serverAPI) GetById(ctx context.Context, req *goodsv1.GetByIdRequest) (*
 	return models.ConvertGoodsFullInfoToGetResponse(resp), nil
 }
 
-func ValidateGetById(goodsId int64) error {
-	if goodsId <= 0 {
+func ValidateGetById(goodsId *int64) error {
+	if *goodsId <= 0 {
 		return status.Error(codes.InvalidArgument, "missing goods_id")
 	}
 
