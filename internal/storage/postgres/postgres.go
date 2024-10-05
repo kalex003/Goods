@@ -32,31 +32,40 @@ func (Gd *GoodsDb) SaveGoods(ctx context.Context, insmodel models.GoodsInfo) (mo
 
 	err := Gd.Db.SelectContext(ctx, &result, `
 	WITH cte AS (
-		UPDATE goods.goods AS g
-		SET place_id = c.place_id,
-		    sku_id =  c.sku_id,
-		    wbsticker_id = c.wbsticker_id,
-		    barcode = c.barcode,
-		    state_id = c.state_id,
-		    ch_employee_id = c.ch_employee_id,
-		    office_id = c.office_id,
-		    wh_id = c.wh_id,
-		    tare_id = c.tare_id,
-		    tare_type = c.tare_type,
-			ch_dt = CURRENT_TIMESTAMP
-		FROM JSONB_TO_RECORDSET($1::JSONB -> 'data') AS c(goods_id BIGINT,
-		    											  place_id BIGINT,
-		                                 				  sku_id BIGINT,
-		                                 				  wbsticker_id BIGINT,
-		                                 				  barcode VARCHAR(30),
-		                                 				  state_id CHAR(3),
-		                                 				  ch_employee_id INTEGER,
-		                                 				  office_id INTEGER,
-		                                 				  wh_id INTEGER,
-		                                 				  tare_id BIGINT,
-		                                 				  tare_type CHAR(3))
-		WHERE g.goods_id = c.goods_id
-		RETURNING g.*)
+	INSERT INTO goods.goods AS g 
+	(
+	    place_id,
+	    sku_id, 
+	    wbsticker_id, 
+	    barcode, 
+	    state_id, 
+	    ch_employee_id, 
+	    office_id,
+	    wh_id, 
+	    tare_id, 
+	    tare_type
+	)
+	SELECT c.place_id,
+	       c.sku_id,
+	       c.wbsticker_id,
+	       c.barcode,
+	       c.state_id,
+	       c.ch_employee_id,
+	       c.office_id,
+	       c.wh_id,
+	       c.tare_id,
+	       c.tare_type
+	FROM JSONB_TO_RECORDSET($1::JSONB -> 'data') AS c(place_id BIGINT,
+	                                 				  sku_id BIGINT,
+	                                 				  wbsticker_id BIGINT,
+	                                 				  barcode VARCHAR(30),
+	                                 				  state_id CHAR(3),
+	                                 				  ch_employee_id INTEGER,
+	                                 				  office_id INTEGER,
+	                                 				  wh_id INTEGER,
+	                                 				  tare_id BIGINT,
+	                                 				  tare_type CHAR(3))
+	RETURNING g.*)
 	INSERT INTO goods.goodslog AS g 
 	(
 	    goods_id, 
@@ -178,10 +187,11 @@ func (Gd *GoodsDb) UpdateGoods(ctx context.Context, updmodel models.GoodsUpdateI
 
 }
 
-func (Gd *GoodsDb) SelectGoodsByIds(ctx context.Context, goodsIds []int64) (models.GoodsFullInfo, error) {
+func (Gd *GoodsDb) SelectGoodsByIds(ctx context.Context, goodsIds *[]int64) (models.GoodsFullInfo, error) {
 
 	var result []models.GoodFullInfo
-	err := Gd.Db.SelectContext(ctx, &result, `SELECT * FROM goods.goods g WHERE g.goods_id = ANY($1)`, pq.Array(goodsIds))
+
+	err := Gd.Db.SelectContext(ctx, &result, `SELECT * FROM goods.goods g WHERE $1 IS NULL OR g.goods_id = ANY($1)`, pq.Array(goodsIds))
 	if err != nil {
 		return models.GoodsFullInfo{}, fmt.Errorf("GetGood: %w", err)
 	}

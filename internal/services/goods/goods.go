@@ -25,7 +25,7 @@ type GoodsUpdater interface { //для типа сторэдж
 }
 
 type GoodsSelecter interface { //для типа сторэдж
-	SelectGoodsByIds(ctx context.Context, goodsIds []int64) (models.GoodsFullInfo, error) // а почему нельзя вот так передать? goodsId models.GoodFullInfo.GoodsId
+	SelectGoodsByIds(ctx context.Context, goodsIds *[]int64) (models.GoodsFullInfo, error) // а почему нельзя вот так передать? goodsId models.GoodFullInfo.GoodsId
 	SelectGoodsByPlace(ctx context.Context, placeId int64) (models.GoodsFullInfo, error)
 	SelectGoodsByTare(ctx context.Context, placeId int64) (models.GoodsFullInfo, error)
 	SelectGoodsHistory(context.Context, int64) (models.GoodsFullInfo, error)
@@ -86,7 +86,7 @@ func (g *Goods) ChangeGoods(ctx context.Context, updmodel models.GoodsUpdateInpu
 
 }
 
-func (g *Goods) GetByIdsGoodsInfo(ctx context.Context, goodsIDs []int64) (models.GoodsFullInfo, error) {
+func (g *Goods) GetByIdsGoodsInfo(ctx context.Context, goodsIDs *[]int64) (models.GoodsFullInfo, error) {
 
 	const op = "Goods.Get"
 

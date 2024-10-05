@@ -35,10 +35,10 @@ const createPartitionSQL = `
 DO
 $$
 BEGIN
-EXECUTE format('CREATE TABLE "goods.goodslog' || '[' || DATE(NOW()::TIMESTAMP)::TEXT || ']"' || ' PARTITION OF goods.goodslog FOR VALUES FROM (''' || DATE_TRUNC('day', NOW()::TIMESTAMP)::TEXT || ''') TO ('''|| (DATE_TRUNC('day', NOW()::TIMESTAMP) + INTERVAL '3 minutes')::TEXT  || ''');');
+SET TIME ZONE 'EUROPE/MOSCOW';
+EXECUTE format('CREATE TABLE "goods.goodslog' || '[' || DATE_TRUNC('MINUTE', NOW()::TIMESTAMP)::TEXT || ']"' || ' PARTITION OF goods.goodslog FOR VALUES FROM (''' || DATE_TRUNC('MINUTE', NOW()::TIMESTAMP)::TEXT || ''') TO ('''|| (DATE_TRUNC('MINUTE', NOW()::TIMESTAMP) + INTERVAL '10 minutes')::TEXT  || ''');');
 END
-$$;
-`
+$$;`
 
 func worker(log *slog.Logger, db *storage.GoodsDb) {
 	for {

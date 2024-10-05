@@ -5,7 +5,7 @@ go 1.22
 require (
 	github.com/ilyakaznacheev/cleanenv v1.5.0
 	github.com/jmoiron/sqlx v1.4.0
-	github.com/kalex003/Goods_Proto v0.0.0-20240929211331-bc23952e7113
+	github.com/kalex003/Goods_Proto v0.0.0-20241005213841-4c8bf9a032ef
 	github.com/lib/pq v1.10.9
 	google.golang.org/grpc v1.65.0
 	google.golang.org/protobuf v1.34.1
