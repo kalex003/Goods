@@ -3,13 +3,16 @@ package main
 import (
 	"Goods/internal/app"
 	"Goods/internal/config"
-	storage "Goods/internal/storage/postgres"
+	"Goods/internal/kafka/consumers"
+	"Goods/internal/kafka/producers"
+	"Goods/internal/worker/partitionMaker"
+	"context"
 	"fmt"
+	"log"
 	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 )
 
 const (
@@ -18,7 +21,7 @@ const (
 	envProd  = "prod"
 )
 
-/*var ConnString = MustGetEnv("DATABASE_URL")
+var ConnString = MustGetEnv("DATABASE_URL")
 
 func MustGetEnv(key string) string {
 	value := os.Getenv(key)
@@ -27,34 +30,9 @@ func MustGetEnv(key string) string {
 	}
 
 	return value
-}*/
-
-var ConnString = "postgres://postgres:postgres@db:5432/Goods?sslmode=disable"
-
-const createPartitionSQL = `
-DO
-$$
-BEGIN
-SET TIME ZONE 'EUROPE/MOSCOW';
-EXECUTE format('CREATE TABLE "goods.goodslog' || '[' || DATE_TRUNC('MINUTE', NOW()::TIMESTAMP)::TEXT || ']"' || ' PARTITION OF goods.goodslog FOR VALUES FROM (''' || DATE_TRUNC('MINUTE', NOW()::TIMESTAMP)::TEXT || ''') TO ('''|| (DATE_TRUNC('MINUTE', NOW()::TIMESTAMP) + INTERVAL '10 minutes')::TEXT  || ''');');
-END
-$$;`
-
-func worker(log *slog.Logger, db *storage.GoodsDb) {
-	for {
-		log.Info("Запуск создания артиции")
-
-		_, err := db.Db.Exec(createPartitionSQL)
-		if err != nil {
-			log.Info("Ошибка при создании партиции: %v\n", err)
-		} else {
-			log.Info("Партиция успешно создана.")
-		}
-
-		// Ожидание 10 минут перед следующим запуском
-		time.Sleep(10 * time.Minute)
-	}
 }
+
+// Константы для Kafka
 
 func main() {
 	cfg := config.MustLoad()
@@ -75,7 +53,14 @@ func main() {
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGTERM, syscall.SIGINT) //обработка заверщаюего сигнала (одного из двух сигтерм или сигинт)
 
-	go worker(log, db)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	go partitionMaker.Worker(ctx, log, db)
+
+	go producers.Worker(ctx, log, db)
+
+	go consumers.Worker(ctx, log, db)
 
 	<-stop //пока в этот канал что-то не придет (сигнал о зщавершении программы), мы тут просто будем висеть и ждать, а сверху будет работать го рутина
 
