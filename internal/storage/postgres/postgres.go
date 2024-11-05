@@ -102,26 +102,6 @@ func (Gd *GoodsDb) SaveGoods(ctx context.Context, insmodel models.GoodsInfo) (mo
 		RETURNING g.goods_id,
 		          g.ch_dt;`, jsonData)*/
 
-	/*	func (s *Storage) ExampleInsertMultiple(ctx context.Context, orders []entity.Order) error {
-			statement := s.sq.Insert(ordersTableName).Columns(tableOrdersCols...)
-
-			for _, o := range orders {
-			statement = statement.Values(o.Status, o.Price)
-		}
-
-			query, args, err := statement.ToSql()
-			if err != nil {
-			return err
-		}
-
-			_, err = s.db.ExecContext(ctx, query, args...)
-			if err != nil {
-			return err
-		}
-			return nil
-		}
-	*/
-
 	cte_statement := squirrel.Insert("goods.goodslog AS g").
 		Columns("place_id", "sku_id", "wbsticker_id", "barcode", "state_id", "ch_employee_id", "office_id", "wh_id", "tare_id", "tare_type").
 		Prefix("WITH ins_cte AS (").
