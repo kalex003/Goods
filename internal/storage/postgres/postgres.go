@@ -1,13 +1,16 @@
 package postgres
 
 import (
-	"Goods/internal/domain/models"
+	domainmodels "Goods/internal/domain/models"
+	"Goods/internal/kafka/producers"
+	dbmodels "Goods/internal/storage/models"
 	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/Masterminds/squirrel"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"time"
 )
 
 type GoodsDb struct {
@@ -24,13 +27,13 @@ func New(connstring string) (*GoodsDb, error) {
 	return &GoodsDb{Db: pool}, nil
 }
 
-func (Gd *GoodsDb) SaveGoods(ctx context.Context, insmodel models.GoodsInfo) (models.GoodsInsertAnswers, error) {
-	var result []models.GoodsInsertAnswer
+func (Gd *GoodsDb) SaveGoods(ctx context.Context, insmodel dbmodels.GoodsInsertInputs) (dbmodels.GoodsInsertAnswers, error) {
+	var result []dbmodels.GoodsInsertAnswer
 
 	/*	// Преобразуем структуру insmodel в JSON
 		jsonData, marshalerr := json.Marshal(insmodel)
 		if marshalerr != nil {
-			return models.GoodsInsertAnswers{}, fmt.Errorf("SaveGoods: unable to marshal insmodel to JSON: %w", marshalerr)
+			return dbmodels.GoodsInsertAnswers{}, fmt.Errorf("SaveGoods: unable to marshal insmodel to JSON: %w", marshalerr)
 		}*/
 
 	/*	rows, err := Gd.Db.Query(ctx, `
@@ -108,13 +111,13 @@ func (Gd *GoodsDb) SaveGoods(ctx context.Context, insmodel models.GoodsInfo) (mo
 		PlaceholderFormat(squirrel.Dollar).
 		Suffix("RETURNING g.*)")
 
-	for _, i := range insmodel.GoodsInfo {
+	for _, i := range insmodel.GoodsInsertInputs {
 		cte_statement = cte_statement.Values(i.PlaceId, i.SkuId, i.WbstickerId, i.Barcode, i.StateId, i.ChEmployeeId, i.OfficeId, i.WhId, i.TareId, i.TareType)
 	}
 
 	_, args, err := cte_statement.ToSql()
 	if err != nil {
-		return models.GoodsInsertAnswers{}, fmt.Errorf("SaveGoods: unable to build query: %w", err)
+		return dbmodels.GoodsInsertAnswers{}, fmt.Errorf("SaveGoods: unable to build query: %w", err)
 	}
 	/*	sql, _, err := squirrel.StatementBuilder.
 		Insert("").
@@ -152,41 +155,41 @@ func (Gd *GoodsDb) SaveGoods(ctx context.Context, insmodel models.GoodsInfo) (mo
 		ToSql()
 
 	if err != nil {
-		return models.GoodsInsertAnswers{}, fmt.Errorf("SaveGoods: unable to build query: %w", err)
+		return dbmodels.GoodsInsertAnswers{}, fmt.Errorf("SaveGoods: unable to build query: %w", err)
 	}
 
 	// Выполняем запрос
 	rows, err := Gd.Db.Query(ctx, sql, args...)
 	if err != nil {
-		return models.GoodsInsertAnswers{}, fmt.Errorf("SaveGoods: %w", err)
+		return dbmodels.GoodsInsertAnswers{}, fmt.Errorf("SaveGoods: %w", err)
 	}
 
 	defer rows.Close()
 
 	for rows.Next() {
-		var answer models.GoodsInsertAnswer
+		var answer dbmodels.GoodsInsertAnswer
 		if err := rows.Scan(&answer.GoodsId, &answer.ChDt); err != nil {
-			return models.GoodsInsertAnswers{}, err
+			return dbmodels.GoodsInsertAnswers{}, err
 		}
 		result = append(result, answer)
 	}
 
 	if rows.Err() != nil {
-		return models.GoodsInsertAnswers{}, rows.Err()
+		return dbmodels.GoodsInsertAnswers{}, rows.Err()
 	}
 
-	return models.GoodsInsertAnswers{
+	return dbmodels.GoodsInsertAnswers{
 		GoodsInsertAnswers: result,
 	}, nil
 }
 
-func (Gd *GoodsDb) UpdateGoods(ctx context.Context, updmodel models.GoodsUpdateInputs) (models.GoodsUpdateAnswers, error) {
-	var result []models.GoodsUpdateAnswer
+func (Gd *GoodsDb) UpdateGoods(ctx context.Context, updmodel dbmodels.GoodsUpdateInputs) (dbmodels.GoodsUpdateAnswers, error) {
+	var result []dbmodels.GoodsUpdateAnswer
 
 	// Преобразуем структуру insmodel в JSON
 	jsonData, marshalerr := json.Marshal(updmodel)
 	if marshalerr != nil {
-		return models.GoodsUpdateAnswers{}, fmt.Errorf("UpdateGoods: unable to marshal updmodel to JSON: %w", marshalerr)
+		return dbmodels.GoodsUpdateAnswers{}, fmt.Errorf("UpdateGoods: unable to marshal updmodel to JSON: %w", marshalerr)
 	}
 	/*
 		rows, err := Gd.Db.Query(ctx, `
@@ -281,37 +284,37 @@ func (Gd *GoodsDb) UpdateGoods(ctx context.Context, updmodel models.GoodsUpdateI
 		ToSql()
 
 	if err != nil {
-		return models.GoodsUpdateAnswers{}, fmt.Errorf("UpdateGoods: unable to build query: %w", err)
+		return dbmodels.GoodsUpdateAnswers{}, fmt.Errorf("UpdateGoods: unable to build query: %w", err)
 	}
 
 	// Выполняем запрос
 	rows, err := Gd.Db.Query(ctx, sql, jsonData)
 	if err != nil {
-		return models.GoodsUpdateAnswers{}, fmt.Errorf("UpdateGoods: %w", err)
+		return dbmodels.GoodsUpdateAnswers{}, fmt.Errorf("UpdateGoods: %w", err)
 	}
 	defer rows.Close()
 
 	for rows.Next() {
-		var answer models.GoodsUpdateAnswer
+		var answer dbmodels.GoodsUpdateAnswer
 		if err := rows.Scan(&answer.GoodsId, &answer.ChDt); err != nil {
-			return models.GoodsUpdateAnswers{}, err
+			return dbmodels.GoodsUpdateAnswers{}, err
 		}
 		result = append(result, answer)
 	}
 
 	if rows.Err() != nil {
-		return models.GoodsUpdateAnswers{}, rows.Err()
+		return dbmodels.GoodsUpdateAnswers{}, rows.Err()
 	}
 
-	return models.GoodsUpdateAnswers{
+	return dbmodels.GoodsUpdateAnswers{
 		GoodsUpdateAnswers: result,
 	}, nil
 
 }
 
-func (Gd *GoodsDb) SelectGoodsByIds(ctx context.Context, goodsIds *[]int64) (models.GoodsFullInfo, error) {
+func (Gd *GoodsDb) SelectGoodsByIds(ctx context.Context, goodsIds *[]int64) (dbmodels.GoodsGetAnswers, error) {
 
-	var result []models.GoodFullInfo
+	var result []dbmodels.GoodsGetAnswer
 	var err error
 	var sql string
 	var rows pgx.Rows
@@ -322,7 +325,7 @@ func (Gd *GoodsDb) SelectGoodsByIds(ctx context.Context, goodsIds *[]int64) (mod
 			ToSql()
 
 		if err != nil {
-			return models.GoodsFullInfo{}, fmt.Errorf("SelectGoodsByIds: unable to build query: %w", err)
+			return dbmodels.GoodsGetAnswers{}, fmt.Errorf("SelectGoodsByIds: unable to build query: %w", err)
 		}
 
 		rows, err = Gd.Db.Query(ctx, sql)
@@ -336,33 +339,33 @@ func (Gd *GoodsDb) SelectGoodsByIds(ctx context.Context, goodsIds *[]int64) (mod
 			ToSql()
 
 		if err != nil {
-			return models.GoodsFullInfo{}, fmt.Errorf("SelectGoodsByIds: unable to build query: %w", err)
+			return dbmodels.GoodsGetAnswers{}, fmt.Errorf("SelectGoodsByIds: unable to build query: %w", err)
 		}
 
 		rows, err = Gd.Db.Query(ctx, sql, goodsIds)
 	}
 
 	if err != nil {
-		return models.GoodsFullInfo{}, fmt.Errorf("SelectGoodsByIds: %w", err)
+		return dbmodels.GoodsGetAnswers{}, fmt.Errorf("SelectGoodsByIds: %w", err)
 	}
 	defer rows.Close()
 
 	for rows.Next() {
-		var answer models.GoodFullInfo
+		var answer dbmodels.GoodsGetAnswer
 		if err := rows.Scan(&answer.GoodsId, &answer.PlaceId, &answer.SkuId, &answer.WbstickerId, &answer.Barcode, &answer.StateId, &answer.ChEmployeeId, &answer.OfficeId, &answer.WhId, &answer.TareId, &answer.TareType, &answer.ChDt, &answer.IsDel); err != nil {
-			return models.GoodsFullInfo{}, err
+			return dbmodels.GoodsGetAnswers{}, err
 		}
 		result = append(result, answer)
 	}
-	return models.GoodsFullInfo{
-		GoodsFullInfo: result,
+	return dbmodels.GoodsGetAnswers{
+		GoodsGetAnswers: result,
 	}, nil
 
 }
 
-func (Gd *GoodsDb) SelectGoodsByPlace(ctx context.Context, placeId int64) (models.GoodsFullInfo, error) {
+func (Gd *GoodsDb) SelectGoodsByPlace(ctx context.Context, placeId int64) (dbmodels.GoodsGetAnswers, error) {
 
-	var result []models.GoodFullInfo
+	var result []dbmodels.GoodsGetAnswer
 
 	sql, args, err := squirrel.StatementBuilder.
 		Select("g.goods_id", "g.place_id", "g.sku_id", "g.wbsticker_id", "g.barcode", "g.state_id", "g.ch_employee_id", "g.office_id", "g.wh_id", "g.tare_id", "g.tare_type", "g.ch_dt", "g.is_del").
@@ -372,31 +375,31 @@ func (Gd *GoodsDb) SelectGoodsByPlace(ctx context.Context, placeId int64) (model
 		ToSql()
 
 	if err != nil {
-		return models.GoodsFullInfo{}, fmt.Errorf("SelectGoodsByPlace: unable to build query: %w", err)
+		return dbmodels.GoodsGetAnswers{}, fmt.Errorf("SelectGoodsByPlace: unable to build query: %w", err)
 	}
 
 	rows, err := Gd.Db.Query(ctx, sql, args...)
 	if err != nil {
-		return models.GoodsFullInfo{}, fmt.Errorf("SelectGoodsByPlace: %w", err)
+		return dbmodels.GoodsGetAnswers{}, fmt.Errorf("SelectGoodsByPlace: %w", err)
 	}
 	defer rows.Close()
 
 	for rows.Next() {
-		var answer models.GoodFullInfo
+		var answer dbmodels.GoodsGetAnswer
 		if err := rows.Scan(&answer.GoodsId, &answer.PlaceId, &answer.SkuId, &answer.WbstickerId, &answer.Barcode, &answer.StateId, &answer.ChEmployeeId, &answer.OfficeId, &answer.WhId, &answer.TareId, &answer.TareType, &answer.ChDt, &answer.IsDel); err != nil {
-			return models.GoodsFullInfo{}, err
+			return dbmodels.GoodsGetAnswers{}, err
 		}
 		result = append(result, answer)
 	}
-	return models.GoodsFullInfo{
-		GoodsFullInfo: result,
+	return dbmodels.GoodsGetAnswers{
+		GoodsGetAnswers: result,
 	}, nil
 
 }
 
-func (Gd *GoodsDb) SelectGoodsByTare(ctx context.Context, tareId int64) (models.GoodsFullInfo, error) {
+func (Gd *GoodsDb) SelectGoodsByTare(ctx context.Context, tareId int64) (dbmodels.GoodsGetAnswers, error) {
 
-	var result []models.GoodFullInfo
+	var result []dbmodels.GoodsGetAnswer
 
 	sql, args, err := squirrel.StatementBuilder.
 		Select("g.goods_id", "g.place_id", "g.sku_id", "g.wbsticker_id", "g.barcode", "g.state_id", "g.ch_employee_id", "g.office_id", "g.wh_id", "g.tare_id", "g.tare_type", "g.ch_dt", "g.is_del").
@@ -406,31 +409,31 @@ func (Gd *GoodsDb) SelectGoodsByTare(ctx context.Context, tareId int64) (models.
 		ToSql()
 
 	if err != nil {
-		return models.GoodsFullInfo{}, fmt.Errorf("SelectGoodsByTare: unable to build query: %w", err)
+		return dbmodels.GoodsGetAnswers{}, fmt.Errorf("SelectGoodsByTare: unable to build query: %w", err)
 	}
 
 	rows, err := Gd.Db.Query(ctx, sql, args...)
 	if err != nil {
-		return models.GoodsFullInfo{}, fmt.Errorf("SelectGoodsByTare: %w", err)
+		return dbmodels.GoodsGetAnswers{}, fmt.Errorf("SelectGoodsByTare: %w", err)
 	}
 	defer rows.Close()
 
 	for rows.Next() {
-		var answer models.GoodFullInfo
+		var answer dbmodels.GoodsGetAnswer
 		if err := rows.Scan(&answer.GoodsId, &answer.PlaceId, &answer.SkuId, &answer.WbstickerId, &answer.Barcode, &answer.StateId, &answer.ChEmployeeId, &answer.OfficeId, &answer.WhId, &answer.TareId, &answer.TareType, &answer.ChDt, &answer.IsDel); err != nil {
-			return models.GoodsFullInfo{}, err
+			return dbmodels.GoodsGetAnswers{}, err
 		}
 		result = append(result, answer)
 	}
-	return models.GoodsFullInfo{
-		GoodsFullInfo: result,
+	return dbmodels.GoodsGetAnswers{
+		GoodsGetAnswers: result,
 	}, nil
 
 }
 
-func (Gd *GoodsDb) SelectGoodsHistory(ctx context.Context, goodsId int64) (models.GoodsFullInfo, error) {
+func (Gd *GoodsDb) SelectGoodsHistory(ctx context.Context, goodsId int64) (dbmodels.GoodsGetAnswers, error) {
 
-	var result []models.GoodFullInfo
+	var result []dbmodels.GoodsGetAnswer
 
 	sql, args, err := squirrel.StatementBuilder.
 		Select("g.goods_id", "g.place_id", "g.sku_id", "g.wbsticker_id", "g.barcode", "g.state_id", "g.ch_employee_id", "g.office_id", "g.wh_id", "g.tare_id", "g.tare_type", "g.ch_dt", "g.is_del").
@@ -440,36 +443,36 @@ func (Gd *GoodsDb) SelectGoodsHistory(ctx context.Context, goodsId int64) (model
 		ToSql()
 
 	if err != nil {
-		return models.GoodsFullInfo{}, fmt.Errorf("SelectGoodsHistory: unable to build query: %w", err)
+		return dbmodels.GoodsGetAnswers{}, fmt.Errorf("SelectGoodsHistory: unable to build query: %w", err)
 	}
 
 	rows, err := Gd.Db.Query(ctx, sql, args...)
 	if err != nil {
-		return models.GoodsFullInfo{}, fmt.Errorf("SelectGoodsHistory: %w", err)
+		return dbmodels.GoodsGetAnswers{}, fmt.Errorf("SelectGoodsHistory: %w", err)
 	}
 	defer rows.Close()
 
 	for rows.Next() {
-		var answer models.GoodFullInfo
+		var answer dbmodels.GoodsGetAnswer
 		if err := rows.Scan(&answer.GoodsId, &answer.PlaceId, &answer.SkuId, &answer.WbstickerId, &answer.Barcode, &answer.StateId, &answer.ChEmployeeId, &answer.OfficeId, &answer.WhId, &answer.TareId, &answer.TareType, &answer.ChDt, &answer.IsDel); err != nil {
-			return models.GoodsFullInfo{}, err
+			return dbmodels.GoodsGetAnswers{}, err
 		}
 		result = append(result, answer)
 	}
-	return models.GoodsFullInfo{
-		GoodsFullInfo: result,
+	return dbmodels.GoodsGetAnswers{
+		GoodsGetAnswers: result,
 	}, nil
 }
 
-func (Gd *GoodsDb) UpdateIsDelOfGoods(ctx context.Context, updIsDelModel models.GoodsUpdateIsDelInputs) (models.GoodsUpdateIsDelAnswers, error) {
+func (Gd *GoodsDb) UpdateIsDelOfGoods(ctx context.Context, updIsDelModel dbmodels.GoodsUpdateIsDelInputs) (dbmodels.GoodsUpdateIsDelAnswers, error) {
 
-	var result []models.GoodsUpdateIsDelAnswer
+	var result []dbmodels.GoodsUpdateIsDelAnswer
 
 	// Преобразуем структуру insmodel в JSON
 	jsonData, marshalErr := json.Marshal(updIsDelModel)
 
 	if marshalErr != nil {
-		return models.GoodsUpdateIsDelAnswers{}, fmt.Errorf("UpdateIsDelOfGoods: unable to marshal model to JSON: %w", marshalErr)
+		return dbmodels.GoodsUpdateIsDelAnswers{}, fmt.Errorf("UpdateIsDelOfGoods: unable to marshal model to JSON: %w", marshalErr)
 	}
 
 	/*	rows, err := Gd.Db.Query(ctx, `
@@ -537,26 +540,40 @@ func (Gd *GoodsDb) UpdateIsDelOfGoods(ctx context.Context, updIsDelModel models.
 		ToSql()
 
 	if err != nil {
-		return models.GoodsUpdateIsDelAnswers{}, fmt.Errorf("UpdateIsDelOfGoods: unable to build query: %w", err)
+		return dbmodels.GoodsUpdateIsDelAnswers{}, fmt.Errorf("UpdateIsDelOfGoods: unable to build query: %w", err)
 	}
 
 	// Выполняем запрос
 	rows, err := Gd.Db.Query(ctx, sql, jsonData)
 	if err != nil {
-		return models.GoodsUpdateIsDelAnswers{}, fmt.Errorf("UpdateIsDelOfGoods: %w", err)
+		return dbmodels.GoodsUpdateIsDelAnswers{}, fmt.Errorf("UpdateIsDelOfGoods: %w", err)
 	}
 	defer rows.Close()
 
 	// Читаем результаты
 	for rows.Next() {
-		var answer models.GoodsUpdateIsDelAnswer
+		var answer dbmodels.GoodsUpdateIsDelAnswer
 		if err := rows.Scan(&answer.GoodsId, &answer.ChDt, &answer.IsDel); err != nil {
-			return models.GoodsUpdateIsDelAnswers{}, fmt.Errorf("UpdateIsDelOfGoods: unable to scan row: %w", err)
+			return dbmodels.GoodsUpdateIsDelAnswers{}, fmt.Errorf("UpdateIsDelOfGoods: unable to scan row: %w", err)
 		}
 		result = append(result, answer)
 	}
 
-	return models.GoodsUpdateIsDelAnswers{
+	return dbmodels.GoodsUpdateIsDelAnswers{
 		GoodsUpdateIsDelAnswers: result,
 	}, nil
+}
+
+func (Gd *GoodsDb) GoodsSendToKafka(ctx context.Context, insmodel dbmodels.GoodsChangeSync) error {
+
+	msgCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+
+	err := producers.SendMessage(ctx, dbmodels.ConvertGoodsFullInfoToGoodsInsertInputs(insmodel)) //вызываю пг-шку
+
+	if err != nil {
+		return domainmodels.GoodsFullInfo{}, err
+	}
+
+	return dbmodels.ConvertGoodsinsertAnswersToGoodsFullInfo(ans), err
+
 }

@@ -1,7 +1,7 @@
 package consumers
 
 import (
-	"Goods/internal/kafka/models"
+	kafkamodels "Goods/internal/kafka/models"
 	storage "Goods/internal/storage/postgres"
 	"context"
 	"encoding/json"
@@ -71,7 +71,7 @@ func Worker(ctx context.Context, log *slog.Logger, db *storage.GoodsDb) {
 
 // processMessage — функция для обработки сообщения и записи его в базу данных
 func processMessage(ctx context.Context, log *slog.Logger, db *storage.GoodsDb, message []byte) error {
-	var importedGood models.KafkaModel
+	var importedGood kafkamodels.KafkaModel
 
 	// Десериализация сообщения из JSON
 	err := json.Unmarshal(message, &importedGood)

@@ -1,14 +1,13 @@
-package models
+package dbmodels
 
 //поч импорт пакета целиком не работает?
 import (
-	goodsv1 "github.com/kalex003/Goods_Proto/gen/go/goods"
-	"google.golang.org/protobuf/types/known/timestamppb"
+	domainmodels "Goods/internal/domain/models"
 )
 
 import "time"
 
-type GoodFullInfo struct {
+type GoodsGetAnswer struct {
 	GoodsId      int64     `db:"goods_id"`
 	PlaceId      int64     `db:"place_id"`
 	SkuId        *int64    `db:"sku_id"`
@@ -24,13 +23,12 @@ type GoodFullInfo struct {
 	IsDel        bool      `db:"is_del"`
 }
 
-type GoodsFullInfo struct {
-	GoodsFullInfo []GoodFullInfo
+type GoodsGetAnswers struct {
+	GoodsGetAnswers []GoodsGetAnswer
 }
 
-// Преобразование одной структуры GoodFullInfo в OneGetResponse
-func ConvertGoodFullInfoToOneGetResponse(good GoodFullInfo) *goodsv1.OneGetResponse {
-	return &goodsv1.OneGetResponse{
+func ConvertGoodsGetAnswerToGoodFullInfo(good GoodsGetAnswer) domainmodels.GoodFullInfo {
+	return domainmodels.GoodFullInfo{
 		GoodsId:      good.GoodsId,
 		PlaceId:      good.PlaceId,
 		SkuId:        good.SkuId,
@@ -42,20 +40,19 @@ func ConvertGoodFullInfoToOneGetResponse(good GoodFullInfo) *goodsv1.OneGetRespo
 		WhId:         good.WhId,
 		TareId:       good.TareId,
 		TareType:     good.TareType,
-		ChDt:         timestamppb.New(good.ChDt),
+		ChDt:         good.ChDt,
 		IsDel:        good.IsDel,
 	}
 }
 
-// Преобразование массива структур GoodFullInfo в GetResponse
-func ConvertGoodsFullInfoToGetResponse(goods GoodsFullInfo) *goodsv1.GetResponse { //пока буду указатель отдавать
-	var responses []*goodsv1.OneGetResponse
-	for _, good := range goods.GoodsFullInfo {
-		response := ConvertGoodFullInfoToOneGetResponse(good)
-		responses = append(responses, response)
+func ConvertGoodsGetAnswerToGoodsFullInfo(goods GoodsGetAnswers) domainmodels.GoodsFullInfo { //пока буду указатель отдавать
+	var infos []domainmodels.GoodFullInfo
+	for _, good := range goods.GoodsGetAnswers {
+		info := ConvertGoodsGetAnswerToGoodFullInfo(good)
+		infos = append(infos, info)
 	}
 
-	return &goodsv1.GetResponse{
-		Structs: responses,
+	return domainmodels.GoodsFullInfo{
+		GoodsFullInfo: infos,
 	}
 }

@@ -1,7 +1,7 @@
 package grpcgoods
 
 import (
-	"Goods/internal/domain/models"
+	domainmodels "Goods/internal/domain/models"
 	"context"
 	goodsv1 "github.com/kalex003/Goods_Proto/gen/go/goods"
 	"google.golang.org/grpc"
@@ -10,18 +10,17 @@ import (
 )
 
 type Goods interface { // тут основная логика будет (создали интерфейс, в services.goods.goods.go будет структура Goods, которая будет реализоывать контракт)
-	InsertNewGoods(context.Context, models.GoodsInfo) (models.GoodsInsertAnswers, error)
-	GetByIdsGoodsInfo(context.Context, *[]int64) (models.GoodsFullInfo, error)
-	ChangeGoods(context.Context, models.GoodsUpdateInputs) (models.GoodsUpdateAnswers, error)
-	ChangeIsDelOfGoods(context.Context, models.GoodsUpdateIsDelInputs) (models.GoodsUpdateIsDelAnswers, error)
-	GetByPlaceGoodsInfo(context.Context, int64) (models.GoodsFullInfo, error)
-	GetByTareGoodsInfo(context.Context, int64) (models.GoodsFullInfo, error)
-	GetGoodsHistory(context.Context, int64) (models.GoodsFullInfo, error)
+	InsertNewGoods(context.Context, domainmodels.GoodsFullInfo) (domainmodels.GoodsFullInfo, error)
+	GetByIdsGoodsInfo(context.Context, *[]int64) (domainmodels.GoodsFullInfo, error)
+	ChangeGoods(context.Context, domainmodels.GoodsFullInfo) (domainmodels.GoodsFullInfo, error)
+	ChangeIsDelOfGoods(context.Context, domainmodels.GoodsFullInfo) (domainmodels.GoodsFullInfo, error)
+	GetByPlaceGoodsInfo(context.Context, int64) (domainmodels.GoodsFullInfo, error)
+	GetByTareGoodsInfo(context.Context, int64) (domainmodels.GoodsFullInfo, error)
+	GetGoodsHistory(context.Context, int64) (domainmodels.GoodsFullInfo, error)
 }
 
 type serverAPI struct { //для реализация интерфейсов, сгенерированнхы прото файлом
-	goodsv1.UnimplementedGoodsServer //метод, сгенерированный grpc
-	goods                            Goods
+	goods Goods
 }
 
 func Register(gRPCServer *grpc.Server, goods Goods) { //создаем структуру выше
@@ -36,13 +35,13 @@ func (s *serverAPI) Insert(ctx context.Context, req *goodsv1.InsertRequest) (*go
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}*/
 
-	ans, err := s.goods.InsertNewGoods(ctx, models.ConvertInsertRequestToGoodInfo(req))
+	ans, err := s.goods.InsertNewGoods(ctx, domainmodels.ConvertInsertRequestToGoodFullInfo(req))
 
 	if err != nil {
 		return nil, err
 	}
 
-	return models.ConvertGoodsInsertAnswerToInsertResponse(ans), nil
+	return domainmodels.ConvertGoodsFullInfoToInsertResponse(ans), nil
 
 }
 
@@ -112,7 +111,7 @@ func (s *serverAPI) GetById(ctx context.Context, req *goodsv1.GetByIdRequest) (*
 		return nil, err
 	}
 
-	return models.ConvertGoodsFullInfoToGetResponse(resp), nil
+	return domainmodels.ConvertGoodsFullInfoToGetResponse(resp), nil
 }
 
 func ValidateGetById(goodsId *int64) error {
@@ -136,7 +135,7 @@ func (s *serverAPI) GetByPlace(ctx context.Context, req *goodsv1.GetByPlaceReque
 		return nil, err
 	}
 
-	return models.ConvertGoodsFullInfoToGetResponse(resp), nil
+	return domainmodels.ConvertGoodsFullInfoToGetResponse(resp), nil
 }
 
 func ValidateGetByPlace(placeId int64) error {
@@ -161,7 +160,7 @@ func (s *serverAPI) GetByTare(ctx context.Context, req *goodsv1.GetByTareRequest
 		return nil, err
 	}
 
-	return models.ConvertGoodsFullInfoToGetResponse(resp), nil
+	return domainmodels.ConvertGoodsFullInfoToGetResponse(resp), nil
 }
 
 func ValidateGetByTare(tareId int64) error {
@@ -186,7 +185,7 @@ func (s *serverAPI) GetHistory(ctx context.Context, req *goodsv1.OneGetByIdReque
 		return nil, err
 	}
 
-	return models.ConvertGoodsFullInfoToGetResponse(resp), nil
+	return domainmodels.ConvertGoodsFullInfoToGetResponse(resp), nil
 }
 
 func ValidateGetHistory(goodsId int64) error {
@@ -202,13 +201,13 @@ func (s *serverAPI) Update(ctx context.Context, req *goodsv1.UpdateRequest) (*go
 		return nil, err
 	}*/
 
-	ans, err := s.goods.ChangeGoods(ctx, models.ConvertUpdateRequestToGoodsUpdateInputs(req))
+	ans, err := s.goods.ChangeGoods(ctx, domainmodels.ConvertUpdateRequestToGoodsFullInfo(req))
 
 	if err != nil {
 		return nil, err
 	}
 
-	return models.ConvertGoodsUpdateAnswersToUpdateResponse(ans), nil
+	return domainmodels.ConvertGoodsFullInfoToUpdateResponse(ans), nil
 }
 
 /*
@@ -269,13 +268,13 @@ func (s *serverAPI) UpdateIsDel(ctx context.Context, req *goodsv1.UpdateIsDelReq
 		}
 	}
 
-	ans, err := s.goods.ChangeIsDelOfGoods(ctx, models.ConvertGoodsUpdateIsDelRequestToUpdateIsDelInput(req))
+	ans, err := s.goods.ChangeIsDelOfGoods(ctx, domainmodels.ConvertUpdateIsDelRequestToGoodsFullInfo(req))
 
 	if err != nil {
 		return nil, err
 	}
 
-	return models.ConvertGoodsUpdateIsDelAnswerToUpdateIsDelResponse(ans), nil
+	return domainmodels.ConvertGoodsFullInfoToUpdateIsDelResponse(ans), nil
 
 }
 

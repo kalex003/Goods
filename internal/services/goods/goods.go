@@ -1,10 +1,10 @@
 package goods
 
-import "log/slog"
-
 import (
-	"Goods/internal/domain/models"
-	"context"
+	domainmodels "Goods/internal/domain/models"
+	dbmodels "Goods/internal/storage/models"
+	"golang.org/x/net/context"
+	"log/slog"
 )
 
 type Goods struct {
@@ -17,22 +17,22 @@ type Goods struct {
 
 // а мб не надо так много интерфейсов?
 type GoodsSaver interface { //для типа сторэдж
-	SaveGoods(ctx context.Context, insmodel models.GoodsInfo) (models.GoodsInsertAnswers, error)
+	SaveGoods(ctx context.Context, insmodel dbmodels.GoodsInsertInputs) (dbmodels.GoodsInsertAnswers, error)
 }
 
 type GoodsUpdater interface { //для типа сторэдж
-	UpdateGoods(ctx context.Context, updmodel models.GoodsUpdateInputs) (models.GoodsUpdateAnswers, error)
+	UpdateGoods(ctx context.Context, updmodel dbmodels.GoodsUpdateInputs) (dbmodels.GoodsUpdateAnswers, error)
 }
 
 type GoodsSelecter interface { //для типа сторэдж
-	SelectGoodsByIds(ctx context.Context, goodsIds *[]int64) (models.GoodsFullInfo, error) // а почему нельзя вот так передать? goodsId models.GoodFullInfo.GoodsId
-	SelectGoodsByPlace(ctx context.Context, placeId int64) (models.GoodsFullInfo, error)
-	SelectGoodsByTare(ctx context.Context, placeId int64) (models.GoodsFullInfo, error)
-	SelectGoodsHistory(context.Context, int64) (models.GoodsFullInfo, error)
+	SelectGoodsByIds(ctx context.Context, goodsIds *[]int64) (dbmodels.GoodsGetAnswers, error)
+	SelectGoodsByPlace(ctx context.Context, placeId int64) (dbmodels.GoodsGetAnswers, error)
+	SelectGoodsByTare(ctx context.Context, placeId int64) (dbmodels.GoodsGetAnswers, error)
+	SelectGoodsHistory(ctx context.Context, goodsId int64) (dbmodels.GoodsGetAnswers, error)
 }
 
 type GoodsDeleter interface {
-	UpdateIsDelOfGoods(ctx context.Context, updIsDelmodel models.GoodsUpdateIsDelInputs) (models.GoodsUpdateIsDelAnswers, error)
+	UpdateIsDelOfGoods(ctx context.Context, updIsDelmodel dbmodels.GoodsUpdateIsDelInputs) (dbmodels.GoodsUpdateIsDelAnswers, error)
 }
 
 func New(log *slog.Logger, goodsSaver GoodsSaver, goodsUpdater GoodsUpdater, goodsSelecter GoodsSelecter, goodsDeleter GoodsDeleter) *Goods {
@@ -45,7 +45,7 @@ func New(log *slog.Logger, goodsSaver GoodsSaver, goodsUpdater GoodsUpdater, goo
 	}
 }
 
-func (g *Goods) InsertNewGoods(ctx context.Context, insmodel models.GoodsInfo) (models.GoodsInsertAnswers, error) { // Правда скорее всего это плохо, что я в 2 слоях использую одну и ту же модель
+func (g *Goods) InsertNewGoods(ctx context.Context, insmodel domainmodels.GoodsFullInfo) (domainmodels.GoodsFullInfo, error) { // Правда скорее всего это плохо, что я в 2 слоях использую одну и ту же модель
 	const op = "Goods.Save"
 
 	log := g.log.With(
@@ -55,17 +55,17 @@ func (g *Goods) InsertNewGoods(ctx context.Context, insmodel models.GoodsInfo) (
 
 	log.Info("attempting to insert goods")
 
-	ans, err := g.GoodsSaver.SaveGoods(ctx, insmodel) //вызываю пг-шку
+	ans, err := g.GoodsSaver.SaveGoods(ctx, dbmodels.ConvertGoodsFullInfoToGoodsInsertInputs(insmodel)) //вызываю пг-шку
 
 	if err != nil {
-		return models.GoodsInsertAnswers{}, err
+		return domainmodels.GoodsFullInfo{}, err
 	}
 
-	return ans, err
+	return dbmodels.ConvertGoodsinsertAnswersToGoodsFullInfo(ans), err
 
 }
 
-func (g *Goods) ChangeGoods(ctx context.Context, updmodel models.GoodsUpdateInputs) (models.GoodsUpdateAnswers, error) {
+func (g *Goods) ChangeGoods(ctx context.Context, updmodel domainmodels.GoodsFullInfo) (domainmodels.GoodsFullInfo, error) {
 
 	const op = "Goods.Update"
 
@@ -76,17 +76,17 @@ func (g *Goods) ChangeGoods(ctx context.Context, updmodel models.GoodsUpdateInpu
 
 	log.Info("Attempting to update goods")
 
-	ans, err := g.GoodsUpdater.UpdateGoods(ctx, updmodel) //вызываю пг-шку
+	ans, err := g.GoodsUpdater.UpdateGoods(ctx, dbmodels.ConvertGoodsFullInfoToGoodsUpdateInputs(updmodel)) //вызываю пг-шку
 
 	if err != nil {
-		return models.GoodsUpdateAnswers{}, err
+		return domainmodels.GoodsFullInfo{}, err
 	}
 
-	return ans, nil
+	return dbmodels.ConvertGoodsUpdateAnswerToGoodsFullInfo(ans), nil
 
 }
 
-func (g *Goods) GetByIdsGoodsInfo(ctx context.Context, goodsIDs *[]int64) (models.GoodsFullInfo, error) {
+func (g *Goods) GetByIdsGoodsInfo(ctx context.Context, goodsIDs *[]int64) (domainmodels.GoodsFullInfo, error) {
 
 	const op = "Goods.Get"
 
@@ -100,14 +100,14 @@ func (g *Goods) GetByIdsGoodsInfo(ctx context.Context, goodsIDs *[]int64) (model
 	goodsInfo, err := g.GoodsSelecter.SelectGoodsByIds(ctx, goodsIDs) //вызываю пг-шку
 
 	if err != nil {
-		return models.GoodsFullInfo{}, err
+		return domainmodels.GoodsFullInfo{}, err
 	}
 
-	return goodsInfo, nil
+	return dbmodels.ConvertGoodsGetAnswerToGoodsFullInfo(goodsInfo), nil
 
 }
 
-func (g *Goods) GetByPlaceGoodsInfo(ctx context.Context, placeID int64) (models.GoodsFullInfo, error) {
+func (g *Goods) GetByPlaceGoodsInfo(ctx context.Context, placeID int64) (domainmodels.GoodsFullInfo, error) {
 
 	const op = "Goods.Getbyplace"
 
@@ -121,14 +121,14 @@ func (g *Goods) GetByPlaceGoodsInfo(ctx context.Context, placeID int64) (models.
 	goodsInfo, err := g.GoodsSelecter.SelectGoodsByPlace(ctx, placeID) //вызываю пг-шку
 
 	if err != nil {
-		return models.GoodsFullInfo{}, err
+		return domainmodels.GoodsFullInfo{}, err
 	}
 
-	return goodsInfo, nil
+	return dbmodels.ConvertGoodsGetAnswerToGoodsFullInfo(goodsInfo), nil
 
 }
 
-func (g *Goods) GetByTareGoodsInfo(ctx context.Context, tareID int64) (models.GoodsFullInfo, error) {
+func (g *Goods) GetByTareGoodsInfo(ctx context.Context, tareID int64) (domainmodels.GoodsFullInfo, error) {
 
 	const op = "Goods.Getbytare"
 
@@ -142,14 +142,14 @@ func (g *Goods) GetByTareGoodsInfo(ctx context.Context, tareID int64) (models.Go
 	goodsInfo, err := g.GoodsSelecter.SelectGoodsByTare(ctx, tareID) //вызываю пг-шку
 
 	if err != nil {
-		return models.GoodsFullInfo{}, err
+		return domainmodels.GoodsFullInfo{}, err
 	}
 
-	return goodsInfo, nil
+	return dbmodels.ConvertGoodsGetAnswerToGoodsFullInfo(goodsInfo), nil
 
 }
 
-func (g *Goods) GetGoodsHistory(ctx context.Context, goodsID int64) (models.GoodsFullInfo, error) {
+func (g *Goods) GetGoodsHistory(ctx context.Context, goodsID int64) (domainmodels.GoodsFullInfo, error) {
 
 	const op = "Goods.GetHistory"
 
@@ -163,14 +163,14 @@ func (g *Goods) GetGoodsHistory(ctx context.Context, goodsID int64) (models.Good
 	goodsInfo, err := g.GoodsSelecter.SelectGoodsHistory(ctx, goodsID) //вызываю пг-шку
 
 	if err != nil {
-		return models.GoodsFullInfo{}, err
+		return domainmodels.GoodsFullInfo{}, err
 	}
 
-	return goodsInfo, nil
+	return dbmodels.ConvertGoodsGetAnswerToGoodsFullInfo(goodsInfo), nil
 
 }
 
-func (g *Goods) ChangeIsDelOfGoods(ctx context.Context, updIsDelmodel models.GoodsUpdateIsDelInputs) (models.GoodsUpdateIsDelAnswers, error) {
+func (g *Goods) ChangeIsDelOfGoods(ctx context.Context, updIsDelmodel domainmodels.GoodsFullInfo) (domainmodels.GoodsFullInfo, error) {
 
 	const op = "Good.ChangeIsDel"
 
@@ -181,12 +181,12 @@ func (g *Goods) ChangeIsDelOfGoods(ctx context.Context, updIsDelmodel models.Goo
 
 	log.Info("attempting to login user")
 
-	ans, err := g.GoodsDeleter.UpdateIsDelOfGoods(ctx, updIsDelmodel) //вызываю пг-шку
+	ans, err := g.GoodsDeleter.UpdateIsDelOfGoods(ctx, dbmodels.ConvertGoodsFullInfoToGoodsUpdateIsDelInputs(updIsDelmodel)) //вызываю пг-шку
 
 	if err != nil {
-		return models.GoodsUpdateIsDelAnswers{}, err
+		return domainmodels.GoodsFullInfo{}, err
 	}
 
-	return ans, nil
+	return dbmodels.ConvertGoodsUpdateIsDelAnswerToGoodsFullInfo(ans), nil
 
 }

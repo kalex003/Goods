@@ -58,7 +58,7 @@ func main() {
 
 	go partitionMaker.Worker(ctx, log, db)
 
-	go producers.Worker(ctx, log, db)
+	go producers.Initkafka(ctx, log)
 
 	go consumers.Worker(ctx, log, db)
 

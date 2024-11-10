@@ -10,6 +10,7 @@ import (
 
 type App struct {
 	GRPCServer *grpcapp.App
+	//тута рест сервис со сваггером
 }
 
 func New(
